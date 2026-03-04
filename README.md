@@ -7,7 +7,7 @@
 <p align="center">为 OpenClaw 提供可生产使用的 QQ 渠道接入：先快速跑通，再按需启用高级能力。</p>
 
 <p align="center">
-  [<a href="./docs/index.md">文档中心</a>] [<a href="./docs/quickstart.md">3 分钟快速开始</a>] [<a href="./docs/config-reference.md">配置参考</a>] [<a href="./deploy/napcat/README.md">NapCat 部署</a>] [<a href="./docs/advanced.md">高级能力</a>]
+  [<a href="https://constansino.github.io/openclaw_qq/">在线文档</a>] [<a href="./docs/quickstart.md">3 分钟快速开始</a>] [<a href="./docs/config-reference.md">配置参考</a>] [<a href="https://github.com/constansino/openclaw_qq/blob/main/deploy/napcat/README.md">NapCat 部署</a>] [<a href="./docs/advanced.md">高级能力</a>]
 </p>
 
 <p align="center">
@@ -84,7 +84,7 @@
 1. [3 分钟快速开始](./docs/quickstart.md)
 2. [配置参考（分组版）](./docs/config-reference.md)
 3. [高级能力与完整参数](./docs/advanced.md)
-4. [NapCat 部署说明](./deploy/napcat/README.md)
+4. [NapCat 部署说明（GitHub）](https://github.com/constansino/openclaw_qq/blob/main/deploy/napcat/README.md)
 
 ## 3 分钟快速开始
 
@@ -103,7 +103,21 @@ cd ../..
 pnpm install && pnpm build
 ```
 
-### 3. 最小配置
+### 3. 优先使用 WebUI 配置（推荐）
+
+在 OpenClaw WebUI 中直接配置 `channels.qq`，比手写 JSON 更直观，也更不容易出现格式错误。
+
+![OpenClaw WebUI 配置示例](./webui.png)
+
+建议先填以下核心项：
+
+- `wsUrl`
+- `accessToken`
+- `requireMention`
+- `admins`（可选）
+- `allowedGroups`（可选）
+
+### 4. 手动 JSON 配置（可选）
 
 编辑 `~/.openclaw/openclaw.json`：
 
@@ -124,7 +138,7 @@ pnpm install && pnpm build
 }
 ```
 
-### 4. 启动与验证
+### 5. 启动与验证
 
 ```bash
 openclaw gateway restart

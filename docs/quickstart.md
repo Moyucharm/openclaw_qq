@@ -17,7 +17,21 @@ pnpm install && pnpm build
 
 > 若你是全局安装 OpenClaw（`npm install -g openclaw`）且仅更新扩展目录，通常只需在 `~/.openclaw/extensions/qq` 执行 `npm install`，然后 `openclaw gateway restart`。
 
-## 3. 最小配置
+## 3. 优先使用 WebUI 配置（推荐）
+
+在 OpenClaw WebUI 中直接配置 `channels.qq`，通常比手写 JSON 更快更稳。
+
+![OpenClaw WebUI 配置示例](../webui.png)
+
+建议先填：
+
+- `wsUrl`
+- `accessToken`
+- `requireMention`
+- `admins`（可选）
+- `allowedGroups`（可选）
+
+## 4. 手动 JSON 配置（可选）
 
 编辑 `~/.openclaw/openclaw.json`：
 
@@ -38,7 +52,7 @@ pnpm install && pnpm build
 }
 ```
 
-## 4. 启动验证
+## 5. 启动验证
 
 ```bash
 openclaw gateway restart
@@ -50,7 +64,7 @@ openclaw gateway restart
 - 群聊 @ 机器人，是否可正常回复。
 - 日志中无持续重连/鉴权报错。
 
-## 5. 下一步
+## 6. 下一步
 
 - 需要管理员/黑白名单控制：看 [配置参考](./config-reference.md)。
-- 需要容器化部署：看 [NapCat 部署说明](../deploy/napcat/README.md)。
+- 需要容器化部署：看 [NapCat 部署说明](https://github.com/constansino/openclaw_qq/blob/main/deploy/napcat/README.md)。

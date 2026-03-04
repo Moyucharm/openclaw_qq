@@ -72,4 +72,4 @@
 ## 进一步阅读
 
 - 完整参数与示例：查看仓库根目录 `README.md` 的配置章节。
-- 部署细节：查看 [NapCat 部署说明](../deploy/napcat/README.md)。
+- 部署细节：查看 [NapCat 部署说明](https://github.com/constansino/openclaw_qq/blob/main/deploy/napcat/README.md)。

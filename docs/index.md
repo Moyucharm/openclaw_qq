@@ -6,9 +6,10 @@
 
 - [3 分钟快速开始](./quickstart.md)
 - [配置参考（分组版）](./config-reference.md)
-- [部署指引（NapCat）](../deploy/napcat/README.md)
+- [部署指引（NapCat）](https://github.com/constansino/openclaw_qq/blob/main/deploy/napcat/README.md)
 - [高级能力与完整参数](./advanced.md)
 - [历史英文 README 归档](./archive/README.en.legacy.md)
+- [在线文档首页](https://constansino.github.io/openclaw_qq/)
 
 ## 文档目标
 
@@ -22,7 +23,7 @@
 
 1. [快速开始](./quickstart.md)
 2. [配置参考](./config-reference.md)
-3. [部署指引（NapCat）](../deploy/napcat/README.md)
+3. [部署指引（NapCat）](https://github.com/constansino/openclaw_qq/blob/main/deploy/napcat/README.md)
 
 ## 交流与支持
 
