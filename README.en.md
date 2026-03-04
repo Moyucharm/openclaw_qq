@@ -1,5 +1,11 @@
 # OpenClaw QQ Plugin (OneBot v11)
 
+## 📚 Docs Hub
+
+- [Docs Home](./docs/index.en.md)
+- [3-minute Quickstart](./docs/quickstart.en.md)
+- [Config Reference (Grouped)](./docs/config-reference.en.md)
+
 ## 📢 Official Discussion Channel (Primary)
 
 **Designated forum for this plugin:**  

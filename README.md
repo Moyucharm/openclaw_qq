@@ -2,6 +2,12 @@
 
 > English version: [README.en.md](./README.en.md)
 
+## 📚 文档中心
+
+- [文档主页](./docs/index.md)
+- [3 分钟快速开始](./docs/quickstart.md)
+- [配置参考（分组版）](./docs/config-reference.md)
+
 ## 📢 官方交流方式（唯一）
 
 **本插件指定交流地点：**  
