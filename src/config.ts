@@ -91,7 +91,7 @@ export const QQConfigSchema = z.object({
   antiRiskMode: BooleanInputSchema(false).describe("风控规避模式（例如处理 URL 发送样式）。"),
   allowedGroups: IdListStringSchema.describe("允许响应的群号白名单（字符串）。Web表单填：20000001 123456789；Raw JSON 填：\"20000001 123456789\"。"),
   blockedUsers: IdListStringSchema.describe("用户黑名单QQ号（字符串）。Web表单填：30000001 或 30000001,10002；Raw JSON 填：\"30000001\"。"),
-  historyLimit: NumberInputSchema(0).describe("群历史注入条数。默认0（推荐，依赖会话系统）；需强保留原文时可设 3~5。"),
+  historyLimit: NumberInputSchema(10).describe("群历史注入条数。默认10（会随每轮请求附带最近群消息）；可按需调整。"),
   keywordTriggers: KeywordTriggersSchema.describe("关键词触发（字符串）。Web表单填：小助手, 帮我；Raw JSON 填：\"小助手, 帮我\"。当 requireMention=true 时，命中关键词可不@直接触发；当 requireMention=false 时，关键词不是必需条件。"),
   enableTTS: BooleanInputSchema(false).describe("是否启用语音回复（依赖 OneBot 服务端支持）。"),
   sharedMediaHostDir: z.preprocess((value) => normalizeLooseString(value), z.string().optional().default("")).describe("可选：宿主机共享媒体目录（供 NapCat 容器访问）。示例：/Users/xxx/openclaw_qq/deploy/napcat/shared_media。"),
