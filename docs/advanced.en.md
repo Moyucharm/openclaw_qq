@@ -40,7 +40,7 @@ This plugin adds full-featured QQ channel support to [OpenClaw](https://github.c
 ## ✨ Core Features
 
 ### 🧠 Deep Intelligence & Context
-* **History Backtracking (Context)**: Optionally fetch the latest N messages in group chats (default: `0`, no extra injection), for scenarios where you need to forcibly preserve raw historical context.
+* **History Backtracking (Context)**: Optionally fetch the latest N messages in group chats (default: `10`), for scenarios where you need to forcibly preserve raw historical context.
 * **System Prompt**: Inject custom prompts so the bot can play specific roles (for example, a “catgirl” or a “strict admin”).
 * **Multi-layer Reply/Forward Parsing**: The AI can recursively expand reply chains and merged forwards, injecting layered text/image/file hints for more reliable context understanding.
 * **Keyword Wake-up**: In addition to @mentions, you can configure specific keywords (for example, “assistant”) to trigger conversation.
@@ -146,7 +146,7 @@ You can also edit config directly. Full config example:
       "allowedGroups": "10001,10002",
       "blockedUsers": "999999",
       "systemPrompt": "You are a QQ bot named 'Artificial Dummy', with a witty and humorous speaking style.",
-      "historyLimit": 0,
+      "historyLimit": 10,
       "keywordTriggers": "assistant, help",
       "autoApproveRequests": true,
       "enableGuilds": true,
@@ -219,7 +219,7 @@ This plugin also namespaces QQ private `fromId` as `qq:user:<id>` to further red
 | `allowedGroups` | string | `""` | **Group allowlist (string)**. In Web form: `20000001 123456789`; in Raw JSON: `"20000001 123456789"`. If set, bot only replies in listed groups. |
 | `blockedUsers` | string | `""` | **User blocklist (string)**. In Web form: `30000001` or `30000001,10002`; in Raw JSON: `"30000001"`. Bot ignores messages from these users. |
 | `systemPrompt` | string | - | **Persona/system role prompt** injected into AI context. |
-| `historyLimit` | number | `0` | **Number of historical messages to inject**. Default relies on OpenClaw session system; set `>0` only when you explicitly need to force raw group history into each turn. |
+| `historyLimit` | number | `10` | **Number of historical messages to inject**. By default the plugin appends recent raw group messages on each triggered turn; set to `0` if you prefer relying only on OpenClaw session memory. |
 | `enrichReplyForwardContext` | boolean | `true` | Enable layered context enrichment from recursive reply/forward parsing. |
 | `maxReplyLayers` | number | `5` | Max recursive depth for reply chains. |
 | `maxForwardLayers` | number | `5` | Max recursive depth for forward chains. |
@@ -230,8 +230,8 @@ This plugin also namespaces QQ private `fromId` as `qq:user:<id>` to further red
 | `includeCurrentOutline` | boolean | `true` | Include a "current message outline" layer. |
 | `debugLayerTrace` | boolean | `false` | Debug switch for layered parsing traces. |
 
-> Recommendation: keep `historyLimit = 0` by default. This aligns better with Telegram channel behavior and reduces redundant context injection and log noise.
-> Only enable `historyLimit` (for example `3~5`) when you explicitly want to append recent raw group messages on every turn.
+> Default is `historyLimit = 10`, which preserves nearby group context out of the box.
+> If you prefer lower token usage/noise, set `historyLimit = 0`; if you need tighter windows, use `3~5`.
 >
 > Security recommendation: if you worry about heavy token usage from frequent group @mentions, configure `admins` and enable `adminOnlyChat = true`.
 
@@ -464,8 +464,8 @@ A: Most likely `requireMention` is set to `false`. In that mode, normal group me
 2. Put your wake word in `keywordTriggers` (for example, `yezi`)
 
 **Q: Why do QQ request logs include prior chat text/history?**
-A: That is controlled by `historyLimit`. Current default is `0`, meaning no extra group-history injection; context is mainly managed by OpenClaw session system (closer to Telegram behavior).
-If you set `historyLimit > 0`, the plugin appends recent raw group messages on each group request.
+A: That is controlled by `historyLimit`. Current default is `10`, so recent group messages are appended by default.
+Set `historyLimit = 0` if you want to disable extra group-history injection and rely on OpenClaw session context only.
 
 
 **Q: How can I tell whether the bot is busy or idle?**
@@ -478,7 +478,7 @@ You can also use admin command `/status` and check `ActiveTasks`:
 
 * Fixed `admins` logic: `admins` now controls admin-command permissions only and no longer blocks normal group messages.
 * Optimized session routing: QQ sessions now use the standard router, reducing session misalignment/confusion in Console/WebUI.
-* Reduced context noise: `historyLimit` default changed to `0`, relying on session system by default instead of repeatedly injecting raw history.
+* Updated default context behavior: `historyLimit` now defaults to `10`, so nearby group context is injected by default.
 
 **Q: How to enable bot voice (TTS)?**
 A: Set `enableTTS` to `true`. Note this depends on OneBot server-side TTS support. NapCat/Lagrange support may be limited and could require extra plugin support.

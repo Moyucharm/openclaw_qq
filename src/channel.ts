@@ -291,10 +291,10 @@ async function fetchProviderModelIdsDynamic(baseUrl: string, apiKey?: string): P
             const text = await resp.text();
             const data = JSON.parse(text) as any;
             const arr = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
-            const ids = arr
+            const ids: string[] = arr
                 .map((item: any) => (typeof item?.id === "string" ? item.id.trim() : ""))
                 .filter((id: string) => Boolean(id));
-            if (ids.length > 0) return { ids: [...new Set(ids)], source: url };
+            if (ids.length > 0) return { ids: Array.from(new Set<string>(ids)), source: url };
         } catch { }
     }
     return null;
@@ -1481,8 +1481,8 @@ export const qqChannel: ChannelPlugin<ResolvedQQAccount> = {
                 return friends.map(f => ({
                     id: String(f.user_id),
                     name: f.remark || f.nickname,
-                    type: "user" as const,
-                    metadata: { ...f }
+                    kind: "user" as const,
+                    raw: { ...f }
                 }));
             } catch (e) {
                 return [];
@@ -1498,8 +1498,8 @@ export const qqChannel: ChannelPlugin<ResolvedQQAccount> = {
                 list.push(...groups.map(g => ({
                     id: String(g.group_id),
                     name: g.group_name,
-                    type: "group" as const,
-                    metadata: { ...g }
+                    kind: "group" as const,
+                    raw: { ...g }
                 })));
             } catch (e) { }
 
@@ -1511,8 +1511,8 @@ export const qqChannel: ChannelPlugin<ResolvedQQAccount> = {
                     list.push(...guilds.map(g => ({
                         id: `guild:${g.guild_id}`,
                         name: `[频道] ${g.guild_name}`,
-                        type: "group" as const,
-                        metadata: { ...g }
+                        kind: "group" as const,
+                        raw: { ...g }
                     })));
                 } catch (e) { }
             }
@@ -1607,7 +1607,7 @@ export const qqChannel: ChannelPlugin<ResolvedQQAccount> = {
                 : namedConfig;
 
             const newConfig = {
-                wsUrl: input.wsUrl || "ws://localhost:3001",
+                wsUrl: input.url || "ws://localhost:3001",
                 accessToken: input.accessToken,
                 enabled: true,
             };
@@ -2129,7 +2129,8 @@ ${current}
                             console.log(`[QQ] direct command hit: /grok_draw prompt_len=${prompt.length} group=${groupId || "-"} user=${userId}`);
                             const draw = await grokDrawDirect(prompt);
                             if (!draw.ok) {
-                                const fail = `[OpenClawd QQ]\n❌ ${draw.error}`;
+                                const failReason = "error" in draw ? draw.error : "Grok draw failed";
+                                const fail = `[OpenClawd QQ]\n鉂?${failReason}`;
                                 if (isGroup) client.sendGroupMsg(groupId, `[CQ:at,qq=${userId}] ${fail}`);
                                 else if (isGuild) client.sendGuildChannelMsg(guildId, channelId, fail);
                                 else client.sendPrivateMsg(userId, fail);
@@ -2237,28 +2238,6 @@ ${current}
                         } catch { }
                     }
 
-                    let historyContext = "";
-                    if (isGroup && config.historyLimit !== 0) {
-                        try {
-                            const history = await client.getGroupMsgHistory(groupId);
-                            if (history?.messages) {
-                                const limit = config.historyLimit || 5;
-                                historyContext = history.messages.slice(-(limit + 1), -1).map((m: any) => {
-                                    const senderName = resolveSenderDisplayName(m?.sender, {
-                                        preferCard: true,
-                                        fallbackUserId: m?.user_id,
-                                    });
-                                    const senderQqRaw = m?.sender?.user_id ?? m?.user_id;
-                                    const senderQq = senderQqRaw !== undefined && senderQqRaw !== null ? String(senderQqRaw).trim() : "";
-                                    const senderPrefix = senderQq && senderName !== senderQq
-                                        ? `${senderName}(${senderQq})`
-                                        : senderName;
-                                    return `${senderPrefix}: ${cleanCQCodes(m.raw_message || "")}`;
-                                }).join("\n");
-                            }
-                        } catch (e) { }
-                    }
-
                     let isTriggered = forceTriggered || !isGroup || text.includes("[动作] 用户戳了你一下");
                     let keywordTriggered = false;
                     const keywordTriggers = parseKeywordTriggersInput(config.keywordTriggers as string | string[] | undefined);
@@ -2319,6 +2298,29 @@ ${current}
                         }
                         return;
                     }
+
+                    let historyContext = "";
+                    if (isGroup && config.historyLimit !== 0) {
+                        try {
+                            const history = await client.getGroupMsgHistory(groupId);
+                            if (history?.messages) {
+                                const limit = config.historyLimit || 5;
+                                historyContext = history.messages.slice(-(limit + 1), -1).map((m: any) => {
+                                    const senderName = resolveSenderDisplayName(m?.sender, {
+                                        preferCard: true,
+                                        fallbackUserId: m?.user_id,
+                                    });
+                                    const senderQqRaw = m?.sender?.user_id ?? m?.user_id;
+                                    const senderQq = senderQqRaw !== undefined && senderQqRaw !== null ? String(senderQqRaw).trim() : "";
+                                    const senderPrefix = senderQq && senderName !== senderQq
+                                        ? `${senderName}(${senderQq})`
+                                        : senderName;
+                                    return `${senderPrefix}: ${cleanCQCodes(m.raw_message || "")}`;
+                                }).join("\n");
+                            }
+                        } catch (e) { }
+                    }
+
 
                     let baseFromId = `qq:user:${userId}`;
                     let conversationLabel = `QQ User ${userId}`;
@@ -2759,33 +2761,33 @@ ${current}
         }
     },
     outbound: {
-        sendText: async ({ to, text, accountId, replyTo }) => {
+        sendText: async ({ to, text, accountId, replyToId }) => {
             const client = getClientForAccount(accountId || DEFAULT_ACCOUNT_ID);
-            if (!client) return { channel: "qq", sent: false, error: "Client not connected" };
+            if (!client) throw new Error("Client not connected");
             const normalizedText = await resolveInlineCqRecord(text);
             const chunks = splitMessage(normalizedText, 4000);
             let lastAck: any = null;
             for (let i = 0; i < chunks.length; i++) {
                 let message: OneBotMessage | string = chunks[i];
-                if (replyTo && i === 0) message = [{ type: "reply", data: { id: String(replyTo) } }, { type: "text", data: { text: chunks[i] } }];
+                if (replyToId && i === 0) message = [{ type: "reply", data: { id: String(replyToId) } }, { type: "text", data: { text: chunks[i] } }];
                 const ack = await sendOneBotMessageWithAck(client, to, message);
                 if (!ack.ok) {
-                    return { channel: "qq", sent: false, error: ack.error || "Failed to send text" };
+                    throw new Error(ack.error || "Failed to send text");
                 }
                 lastAck = ack.data;
 
                 if (chunks.length > 1) await sleep(1000);
             }
-            return { channel: "qq", sent: true, messageId: lastAck?.message_id ?? lastAck?.messageId ?? null };
+            return { channel: "qq", messageId: String(lastAck?.message_id ?? lastAck?.messageId ?? "") };
         },
-        sendMedia: async ({ to, text, mediaUrl, accountId, replyTo }) => {
+        sendMedia: async ({ to, text, mediaUrl, accountId, replyToId }) => {
             const client = getClientForAccount(accountId || DEFAULT_ACCOUNT_ID);
-            if (!client) return { channel: "qq", sent: false, error: "Client not connected" };
+            if (!client) throw new Error("Client not connected");
 
-            const runtimeCfg = accountConfigs.get(accountId || DEFAULT_ACCOUNT_ID) || accountConfigs.get(DEFAULT_ACCOUNT_ID) || {};
+            const runtimeCfg = accountConfigs.get(accountId || DEFAULT_ACCOUNT_ID) || accountConfigs.get(DEFAULT_ACCOUNT_ID);
 
-            const hostSharedDir = typeof runtimeCfg.sharedMediaHostDir === "string" ? runtimeCfg.sharedMediaHostDir.trim() : "";
-            const containerSharedDirRaw = typeof runtimeCfg.sharedMediaContainerDir === "string" ? runtimeCfg.sharedMediaContainerDir.trim() : "";
+            const hostSharedDir = typeof runtimeCfg?.sharedMediaHostDir === "string" ? runtimeCfg.sharedMediaHostDir.trim() : "";
+            const containerSharedDirRaw = typeof runtimeCfg?.sharedMediaContainerDir === "string" ? runtimeCfg.sharedMediaContainerDir.trim() : "";
             const containerSharedDir = containerSharedDirRaw || "/openclaw_media";
 
             const sourceKind = detectMediaKind(mediaUrl);
@@ -2815,17 +2817,17 @@ ${current}
             let textAck: any = null;
             if (text && text.trim()) {
                 const textMessage: OneBotMessage = [];
-                if (replyTo) textMessage.push({ type: "reply", data: { id: String(replyTo) } });
+                if (replyToId) textMessage.push({ type: "reply", data: { id: String(replyToId) } });
                 textMessage.push({ type: "text", data: { text } });
                 const ack = await sendOneBotMessageWithAck(client, to, textMessage);
                 if (!ack.ok) {
-                    return { channel: "qq", sent: false, error: `Text send failed: ${ack.error || "unknown"}` };
+                    throw new Error(`Text send failed: ${ack.error || "unknown"}`);
                 }
                 textAck = ack.data;
             }
 
             const mediaMessage: OneBotMessage = [];
-            if (replyTo && !(text && text.trim())) mediaMessage.push({ type: "reply", data: { id: String(replyTo) } });
+            if (replyToId && !(text && text.trim())) mediaMessage.push({ type: "reply", data: { id: String(replyToId) } });
             const mediaKind = detectMediaKind(mediaUrl, finalUrl);
             const audioLike = mediaKind === "audio";
             const imageLike = mediaKind === "image";
@@ -2833,7 +2835,7 @@ ${current}
             const fileLike = mediaKind === "file";
 
             if (audioLike && textAck) {
-                const configuredDelay = Number(runtimeCfg.rateLimitMs ?? 1000);
+                const configuredDelay = Number(runtimeCfg?.rateLimitMs ?? 1000);
                 const delayMs = Number.isFinite(configuredDelay) ? Math.max(1200, configuredDelay) : 1200;
                 await sleep(delayMs);
             }
@@ -2863,12 +2865,11 @@ ${current}
                     if (uploadAck.ok) {
                         return {
                             channel: "qq",
-                            sent: true,
                             textSent: Boolean(textAck),
                             mediaSent: true,
                             transport: "upload_group_file",
                             mediaKind: "file",
-                            messageId: textAck?.message_id ?? textAck?.messageId ?? null,
+                            messageId: String(textAck?.message_id ?? textAck?.messageId ?? ""),
                         };
                     }
                     console.warn(`[QQ] upload_group_file failed (primary path): ${uploadAck.error || "unknown"}`);
@@ -2887,7 +2888,6 @@ ${current}
                     if (uploadAck.ok) {
                         return {
                             channel: "qq",
-                            sent: true,
                             textSent: Boolean(textAck),
                             mediaSent: true,
                             fallbackSent: true,
@@ -2895,24 +2895,23 @@ ${current}
                             mediaKind: videoLike ? "video" : "file",
                             errorClass,
                             error: `Primary media path failed; fallback upload_group_file succeeded. reason=${primaryError}`,
-                            messageId: textAck?.message_id ?? textAck?.messageId ?? null,
+                            messageId: String(textAck?.message_id ?? textAck?.messageId ?? ""),
                         };
                     }
                 }
                 if (audioLike) {
                     const fileFallback: OneBotMessage = [];
-                    if (replyTo && !(text && text.trim())) fileFallback.push({ type: "reply", data: { id: String(replyTo) } });
+                    if (replyToId && !(text && text.trim())) fileFallback.push({ type: "reply", data: { id: String(replyToId) } });
                     let fallbackFile = stagedAudioFile || finalUrl;
                     if (fallbackFile.startsWith("base64://")) {
                         return {
                             channel: "qq",
-                            sent: Boolean(textAck),
                             error: `Media send failed: ${primaryError}`,
                             errorClass,
                             mediaKind: "audio",
                             textSent: Boolean(textAck),
                             mediaSent: false,
-                            messageId: textAck?.message_id ?? textAck?.messageId ?? null,
+                            messageId: String(textAck?.message_id ?? textAck?.messageId ?? ""),
                         };
                     }
                     if (!finalUrl.startsWith("base64://") && hostSharedDir) {
@@ -2929,7 +2928,6 @@ ${current}
                     if (fallbackAck.ok) {
                         return {
                             channel: "qq",
-                            sent: true,
                             textSent: Boolean(textAck),
                             mediaSent: false,
                             fallbackSent: true,
@@ -2937,28 +2935,26 @@ ${current}
                             errorClass,
                             mediaKind: "audio",
                             error: `Audio(record) failed; fallback file sent. reason=${primaryError}`,
-                            messageId: fallbackAck.data?.message_id ?? fallbackAck.data?.messageId ?? textAck?.message_id ?? textAck?.messageId ?? null,
+                            messageId: String(fallbackAck.data?.message_id ?? fallbackAck.data?.messageId ?? textAck?.message_id ?? textAck?.messageId ?? ""),
                         };
                     }
                 }
                 return {
                     channel: "qq",
-                    sent: Boolean(textAck),
                     error: `Media send failed: ${primaryError}`,
                     errorClass,
                     mediaKind: mediaKind,
                     textSent: Boolean(textAck),
                     mediaSent: false,
-                    messageId: textAck?.message_id ?? textAck?.messageId ?? null,
+                    messageId: String(textAck?.message_id ?? textAck?.messageId ?? ""),
                 };
             }
             return {
                 channel: "qq",
-                sent: true,
                 textSent: Boolean(textAck),
                 mediaSent: true,
                 mediaKind,
-                messageId: mediaAck.data?.message_id ?? mediaAck.data?.messageId ?? textAck?.message_id ?? textAck?.messageId ?? null,
+                messageId: String(mediaAck.data?.message_id ?? mediaAck.data?.messageId ?? textAck?.message_id ?? textAck?.messageId ?? ""),
             };
         },
         // @ts-ignore

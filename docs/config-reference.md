@@ -30,7 +30,7 @@
 
 ## E. 上下文增强
 
-- `historyLimit`：注入群历史条数（推荐默认 0）。
+- `historyLimit`：注入群历史条数（默认 10）。
 - `enrichReplyForwardContext`：是否递归解析 reply/forward。
 - `maxReplyLayers` / `maxForwardLayers`：递归深度上限。
 - `maxTotalContextChars`：注入字符预算上限。

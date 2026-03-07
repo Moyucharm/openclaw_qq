@@ -30,7 +30,7 @@
 
 ## E. Context Enrichment
 
-- `historyLimit`: injected group history count (recommended default `0`).
+- `historyLimit`: injected group history count (default `10`).
 - `enrichReplyForwardContext`: recursive reply/forward context parsing.
 - `maxReplyLayers` / `maxForwardLayers`: recursion depth.
 - `maxTotalContextChars`: total context char budget.

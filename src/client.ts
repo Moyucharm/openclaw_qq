@@ -285,15 +285,28 @@ export class OneBotClient extends EventEmitter {
       }
 
       const echo = Math.random().toString(36).substring(2, 15);
+      let settled = false;
+      let timeoutHandle: NodeJS.Timeout | null = null;
+
+      const settle = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        this.ws?.off("message", handler);
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
+          timeoutHandle = null;
+        }
+        fn();
+      };
+
       const handler = (data: WebSocket.RawData) => {
         try {
           const resp = JSON.parse(data.toString());
           if (resp.echo === echo) {
-            this.ws?.off("message", handler);
             if (resp.status === "ok") {
-              resolve(resp.data);
+              settle(() => resolve(resp.data));
             } else {
-              reject(new Error(resp.msg || "API request failed"));
+              settle(() => reject(new Error(resp.msg || "API request failed")));
             }
           }
         } catch (err) {
@@ -302,12 +315,16 @@ export class OneBotClient extends EventEmitter {
       };
 
       this.ws.on("message", handler);
-      this.ws.send(JSON.stringify({ action, params, echo }));
+      try {
+        this.ws.send(JSON.stringify({ action, params, echo }));
+      } catch (err) {
+        settle(() => reject(err instanceof Error ? err : new Error(String(err))));
+        return;
+      }
 
       // Timeout guard
-      setTimeout(() => {
-        this.ws?.off("message", handler);
-        reject(new Error("Request timeout"));
+      timeoutHandle = setTimeout(() => {
+        settle(() => reject(new Error("Request timeout")));
       }, timeoutMs);
     });
   }
