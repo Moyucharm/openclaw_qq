@@ -17,16 +17,16 @@
 
 ## C. Reliability
 
-- `maxRetries`: retry count on failures.
-- `retryDelayMs`: delay between retries.
-- `fastFailErrors`: skip waiting for unrecoverable errors.
+- `maxRetries`: retry count on failures (default `0`, disabled).
+- `retryDelayMs`: delay between retries (only applies when `maxRetries > 0`).
+- `fastFailErrors`: skip waiting for unrecoverable errors (default `[]`, disabled).
 - `enableEmptyReplyFallback`: fallback when model returns empty output.
 - `emptyReplyFallbackText`: fallback message.
 
 ## D. Concurrency & Interrupt
 
-- `queueDebounceMs`: debounce window for same-session bursts.
-- `interruptOnNewMessage`: interrupt old reply when new input arrives.
+- `queueDebounceMs`: debounce window for same-session bursts (default `0`, disabled).
+- `interruptOnNewMessage`: interrupt old reply when new input arrives (default disabled).
 
 ## E. Context Enrichment
 
@@ -41,6 +41,7 @@
 - `rateLimitMs`: delay between split sends.
 - `formatMarkdown`: convert markdown to plain text.
 - `antiRiskMode`: anti-risk output mode.
+- `showReplySessionSource`: prepend a session-source hint to replies (useful for `/tmp` flows).
 - `forwardLongReplyThreshold`: switch long replies to merged-forward mode.
 
 ## G. Media & Guild
@@ -62,8 +63,12 @@
       "adminOnlyChat": true,
       "allowedGroups": "20000001",
       "rateLimitMs": 1000,
-      "maxRetries": 3,
-      "retryDelayMs": 3000
+      "maxRetries": 0,
+      "retryDelayMs": 3000,
+      "fastFailErrors": [],
+      "queueDebounceMs": 0,
+      "injectGatewayMeta": false,
+      "interruptOnNewMessage": false
     }
   }
 }

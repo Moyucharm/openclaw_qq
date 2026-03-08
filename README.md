@@ -23,6 +23,12 @@
 > [!NOTE]
 > 本仓库主 README 自即日起仅维护中文。历史英文 README 已归档：`docs/archive/README.en.legacy.md`。
 
+## 最近更新（2026-03）
+
+- 新增 `showReplySessionSource`：回复前可标注来源会话，方便区分主会话与 `/临时` 会话。
+- 自动重试 / Fast Fail / 并发合并 / 新消息打断 / 隐藏网关元数据等高级控制现已默认关闭，按需开启即可。
+- WebUI 参数说明已补强；复杂配置说明统一下沉到 `docs/advanced.md` 与 `docs/config-reference.md`。
+
 ## 最近更新（2026-02）
 
 - 修复 `channel restart` / `health-monitor` 重启循环，避免通道被误判退出后反复拉起。
@@ -63,6 +69,7 @@
 
 - [x] reply/forward 递归解析与分层上下文注入
 - [x] 隐藏 QQ 网关元数据注入（`injectGatewayMeta`）
+- [x] 可选回复来源会话标记（`showReplySessionSource`）
 - [x] 同会话并发防漏吞队列（`queueDebounceMs`）
 - [x] 新消息打断旧回复（`interruptOnNewMessage`）
 - [x] 长回复自动合并转发（`forwardLongReplyThreshold`）

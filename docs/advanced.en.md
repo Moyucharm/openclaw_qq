@@ -28,7 +28,7 @@ OpenClawd is a multi-purpose agent. The chat demo below only shows the most basi
 - Improved outbound reliability: failed WS sends are re-queued and trigger reconnect, reducing "logged as sent but not delivered in QQ" cases.
 - Added heartbeat event passthrough from client to upper layer for better health visibility.
 - Added multi-layer context parsing: recursive `reply/forward` expansion with layered text/image/file hints injected into context.
-- Added auto-retry + Fast Fail: supports `maxRetries` / `retryDelayMs` / `fastFailErrors`, and can skip waiting on unrecoverable errors.
+- Added auto-retry + Fast Fail: supports `maxRetries` / `retryDelayMs` / `fastFailErrors`; these controls are disabled by default and can be enabled when needed.
 - Added Active Model Failover: automatically switches to `fallbacks` in `openclaw.json` when the primary model repeatedly fails or returns empty output.
 - Added concurrency anti-drop queue: concurrent messages in the same session are debounced and serialized to reduce "busy drop" cases.
 - Added hidden QQ metadata injection: optional gateway context (trigger type/session label/source) can be injected into system context (enabled by default).
@@ -141,8 +141,12 @@ You can also edit config directly. Full config example:
       "nonAdminBlockedMessage": "Only admins can trigger this bot currently.\nPlease contact an administrator if you need access.",
       "blockedNotifyCooldownMs": 10000,
       "showProcessingStatus": true,
+      "showReplySessionSource": true,
       "processingStatusDelayMs": 500,
       "processingStatusText": "输入中",
+      "maxRetries": 0,
+      "retryDelayMs": 3000,
+      "fastFailErrors": [],
       "allowedGroups": "10001,10002",
       "blockedUsers": "999999",
       "systemPrompt": "You are a QQ bot named 'Artificial Dummy', with a witty and humorous speaking style.",
@@ -157,8 +161,9 @@ You can also edit config directly. Full config example:
       "formatMarkdown": true,
       "antiRiskMode": false,
       "maxMessageLength": 4000,
-      "injectGatewayMeta": true,
-      "interruptOnNewMessage": true,
+      "queueDebounceMs": 0,
+      "injectGatewayMeta": false,
+      "interruptOnNewMessage": false,
       "forwardLongReplyThreshold": 0,
       "forwardNodeCharLimit": 1000,
       "forwardNodeName": "OpenClaw"
@@ -201,18 +206,19 @@ This plugin also namespaces QQ private `fromId` as `qq:user:<id>` to further red
 | `notifyNonAdminBlocked` | boolean | `false` | When `adminOnlyChat=true` and a non-admin triggers, whether to send a rejection notice. |
 | `nonAdminBlockedMessage` | string | `Only admins can trigger this bot currently.\nPlease contact an administrator if you need access.` | Rejection message shown to blocked non-admin users. |
 | `blockedNotifyCooldownMs` | number | `10000` | Cooldown (ms) for non-admin rejection notices. Prevents repeated notices within the same session/user target. |
-| `maxRetries` | number | `3` | **Max auto-retries**. Number of retries when model requests fail or return empty; switches to `fallbacks` array models starting from the 3rd attempt. |
-| `retryDelayMs` | number | `3000` | Delay in milliseconds between retries. |
-| `fastFailErrors` | array | `["401", ...]` | A list of string keywords (e.g., `"No API key found"`, `"API Key"`, `"401"`) that instantly skip the `maxRetries` wait and immediately trigger the model fallback mechanism to avoid locking up the plugin on unrecoverable authentication errors. |
-| `queueDebounceMs` | number | `3000` | Debounce window (ms) for the concurrency queue. Burst messages in the same session are grouped before dispatch to reduce drops. |
-| `injectGatewayMeta` | boolean | `true` | Whether to inject hidden QQ gateway metadata (`<qq_context>`) for better model awareness of source/trigger/session. |
-| `interruptOnNewMessage` | boolean | `true` | Whether to soft-interrupt the in-progress reply when a newer message arrives in the same session. |
+| `maxRetries` | number | `0` | **Max auto-retries**. Auto-retry is disabled by default; set this above `0` if you want model failures or empty replies to retry automatically. |
+| `retryDelayMs` | number | `3000` | Delay in milliseconds between retries. Only applies when `maxRetries > 0`. |
+| `fastFailErrors` | array | `[]` | A list of fast-skip error keywords. Disabled by default; when you add terms like `"401"`, `"Unauthorized"`, or `"No API key found"`, unrecoverable auth/billing errors skip the current model immediately. |
+| `queueDebounceMs` | number | `0` | Debounce window (ms) for same-session burst merging. Disabled by default; set it above `0` to group burst messages before dispatch. |
+| `injectGatewayMeta` | boolean | `false` | Whether to inject hidden QQ gateway metadata (`<qq_context>`) for better model awareness of source/trigger/session. Disabled by default. |
+| `interruptOnNewMessage` | boolean | `false` | Whether to soft-interrupt the in-progress reply when a newer message arrives in the same session. Disabled by default. |
 | `forwardLongReplyThreshold` | number | `0` | Character threshold for auto-switching long replies to QQ merged forward mode. `0` disables this behavior. |
 | `forwardNodeCharLimit` | number | `1000` | Max chars per node when long replies are sent as merged forwards. |
 | `forwardNodeName` | string | `OpenClaw` | Display name used in merged forward nodes for long replies. |
 | `enableEmptyReplyFallback` | boolean | `true` | Empty-reply fallback switch. If the model returns empty content, the bot sends a user-visible hint instead of appearing silent. |
 | `emptyReplyFallbackText` | string | `⚠️ The model returned empty content this turn. Please retry, or run /newsession first.` | Fallback text used when a model turn returns empty output. |
 | `showProcessingStatus` | boolean | `true` | Busy-status visualization (enabled by default). While processing, the bot temporarily appends ` (输入中)` to its group card. |
+| `showReplySessionSource` | boolean | `true` | Whether to prepend a session-source hint to each user-facing reply, such as `(from 会话draft)` or `(from 主会话)`. Enabled by default; especially useful when you use `/tmp` sessions heavily. |
 | `processingStatusDelayMs` | number | `500` | Delay in milliseconds before applying the busy suffix. |
 | `processingStatusText` | string | `输入中` | Busy suffix text. Default is `输入中`. |
 | `requireMention` | boolean | `true` | **Group trigger gate**. `true` = trigger only on @mention / reply-to-bot / keyword hit; `false` = normal group messages may also trigger (not recommended for long-term use). |
@@ -255,7 +261,7 @@ This plugin also namespaces QQ private `fromId` as `qq:user:<id>` to further red
 
 ### 5. Active Model Failover Configuration
 
-This plugin features a built-in auto-failover mechanism that triggers upon repeated request failures or empty AI replies. Combined with `maxRetries` and `retryDelayMs`, it seamlessly switches to a fallback model when the primary model encounters rate limits or errors.
+This plugin features a built-in auto-failover mechanism that triggers upon repeated request failures or empty AI replies. It is disabled by default; once you set `maxRetries` above `0`, you can combine it with `retryDelayMs` to switch to fallback models when the primary model encounters rate limits or errors.
 
 To configure this, find or add the `model` object field inside your `openclaw.json` (either globally at `agents.defaults.model` or inside a specific agent configuration), and define a `fallbacks` array like so:
 
@@ -281,7 +287,7 @@ To configure this, find or add the `model` object field inside your `openclaw.js
 
 The plugin implements a localized sliding-window debounce queue per-group/per-user to mitigate the risk of message dropping. If 5 users talk to the bot in a group simultaneously, the queue will capture all 5 events, combine them as context, and ensure they are sequentially processed instead of OpenClaw rejecting concurrent events as busy.
 
-- Debounce window: controlled by `queueDebounceMs` (default `3000ms`).
+- Debounce window: controlled by `queueDebounceMs` (default `0`, disabled; set it above `0` to enable burst merging).
 - Scope: local to each session key (group/direct/channel), not a global single queue.
 - Tuning: increase to `4000~6000` for heavy group bursts; decrease to `1000~2000` if you prefer lower latency.
 
