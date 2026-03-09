@@ -23,6 +23,7 @@
 ## 最近更新（2026-03）
 
 - 仓库文档现统一维护中文版本，仓库内英文 Markdown 已清理。
+- 新增 OneBot HTTP 模式文档，支持通过 HTTP API + webhook 接入，说明见 `docs/http-transport.md`。
 - QQ 私聊 session key 已回归官方命名风格：peer id 使用纯 QQ 号，不再写成 `qq:user:<id>`；旧本机会话会在启动时自动规范化。
 - 新增 `keywordOnlyTrigger`：群聊可切换为“仅关键词触发”，忽略 @ / 回复触发，适合与其他机器人共用同一 QQ 账号。
 - 新增 `showReplySessionSource`：回复前可标注来源会话，方便区分主会话与 `/临时` 会话。
