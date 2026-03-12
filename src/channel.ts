@@ -223,7 +223,7 @@ function splitLongText(input: string, maxLength = 2800): string[] {
             cut = lastNewline;
         } else {
             // 特殊符号处截断
-            const sentencePattern = /[。！？；…\n\.!?;]/g;
+            const sentencePattern = /[。！？；…\n!?;]/g;
             let bestCut = -1;
             let match;
             while ((match = sentencePattern.exec(rest.slice(0, safeMaxLength + 50))) !== null) {
@@ -2475,7 +2475,7 @@ ${current}
                                         return i > 0;
                                     }
                                 } else {
-                                    // 目标字段异常时直接中止，避免继续发送造成不可预期乱序
+                                    // 目标字段异常时中止
                                     console.warn(`[QQ] Invalid chunk target context, abort chunk send: isGroup=${String(isGroup)} isGuild=${String(isGuild)} groupId=${String(groupId)} guildId=${String(guildId)} channelId=${String(channelId)} userId=${String(userId)}`);
                                     return i > 0;
                                 }
