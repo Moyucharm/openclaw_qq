@@ -2695,6 +2695,7 @@ ${current}
                     }
 
 
+
                     const keywordOnlyTrigger = Boolean(config.keywordOnlyTrigger) && isGroup;
 
                     let isTriggered = forceTriggered || !isGroup || text.includes("[动作] 用户戳了你一下");
