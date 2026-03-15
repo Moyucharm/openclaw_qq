@@ -1988,7 +1988,7 @@ export const qqChannel: ChannelPlugin<ResolvedQQAccount> = {
                 : namedConfig;
 
             const newConfig = {
-                wsUrl: input.url || "ws://localhost:3001",
+                wsUrl: input.wsUrl || "ws://localhost:3001",
                 accessToken: input.accessToken,
                 enabled: true,
             };
@@ -2585,7 +2585,7 @@ ${current}
                             const draw = await grokDrawDirect(prompt);
                             if (!draw.ok) {
                                 const failReason = "error" in draw ? draw.error : "Grok draw failed";
-                                const fail = `[OpenClawd QQ]\n鉂?${failReason}`;
+                                const fail = `[OpenClawd QQ]\n❌ ${failReason}`;
                                 if (isGroup) client.sendGroupMsg(groupId, `[CQ:at,qq=${userId}] ${fail}`);
                                 else if (isGuild) client.sendGuildChannelMsg(guildId, channelId, fail);
                                 else client.sendPrivateMsg(userId, fail);
